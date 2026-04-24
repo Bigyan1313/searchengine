@@ -10,3 +10,7 @@ env/
 
 # The index is rebuilt from lyrics.csv at deploy time — no need to commit it.
 indexdir/
+
+.env
+.venv/
+__pycache__/
