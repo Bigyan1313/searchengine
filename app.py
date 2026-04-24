@@ -12,6 +12,7 @@ Routes:
 """
 
 import os
+import fcntl
 from flask import Flask, render_template, request, jsonify, abort
 import requests
 
@@ -46,6 +47,7 @@ def _load_dotenv(dotenv_path):
 # ---------- configuration ----------
 _load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 INDEX_DIR = os.path.join(os.path.dirname(__file__), "indexdir")
+INDEX_BUILD_LOCK = "/tmp/lyricly_index_build.lock"
 BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "")
 BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
 
@@ -55,19 +57,46 @@ SNIPPET_MAX_CHARS = 240
 app = Flask(__name__)
 
 # ---------- Whoosh setup ----------
-# Open the index once at startup and reuse across requests.
-if not os.path.exists(INDEX_DIR):
-    raise RuntimeError(
-        f"Index directory not found at {INDEX_DIR}. "
-        "Run `python build_index.py` first."
-    )
-ix = open_dir(INDEX_DIR)
+ix = None
+_parser = None
 
-# Query across title + artist + lyrics. OrGroup means any term matches
-# (standard search-engine behavior); BM25F is Whoosh's default relevance model.
-_parser = MultifieldParser(
-    ["title", "artist", "lyrics"], schema=ix.schema, group=OrGroup.factory(0.9)
-)
+
+def _index_exists():
+    if not os.path.isdir(INDEX_DIR):
+        return False
+    try:
+        return any(name.endswith(".toc") for name in os.listdir(INDEX_DIR))
+    except OSError:
+        return False
+
+
+def _ensure_index_ready():
+    """Build index on-demand when missing (use a process lock to avoid races)."""
+    if _index_exists():
+        return
+
+    with open(INDEX_BUILD_LOCK, "w", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        if _index_exists():
+            return
+        from build_index import build
+        build()
+        if not _index_exists():
+            raise RuntimeError(f"Failed to create Whoosh index at {INDEX_DIR}.")
+
+
+def _init_search_objects():
+    global ix, _parser
+    if ix is not None and _parser is not None:
+        return
+
+    _ensure_index_ready()
+    ix = open_dir(INDEX_DIR)
+    # Query across title + artist + lyrics. OrGroup means any term matches
+    # (standard search-engine behavior); BM25F is Whoosh's default relevance model.
+    _parser = MultifieldParser(
+        ["title", "artist", "lyrics"], schema=ix.schema, group=OrGroup.factory(0.9)
+    )
 
 
 # ---------- helpers ----------
@@ -102,6 +131,7 @@ def home():
 
 @app.route("/api/local")
 def api_local():
+    _init_search_objects()
     q = (request.args.get("q") or "").strip()
     if not q:
         return jsonify({"query": q, "total": 0, "results": []})
@@ -190,6 +220,7 @@ def api_web():
 
 @app.route("/song/<doc_id>")
 def song(doc_id):
+    _init_search_objects()
     with ix.searcher() as searcher:
         doc = searcher.document(doc_id=str(doc_id))
         if not doc:
