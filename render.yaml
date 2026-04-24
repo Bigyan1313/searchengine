@@ -1,0 +1,15 @@
+# Render.com blueprint.
+# After pushing to GitHub, go to render.com -> New -> Blueprint and point at this repo.
+# Then set the BRAVE_API_KEY environment variable in the dashboard.
+services:
+  - type: web
+    name: lyricly-search
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python build_index.py"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
+    envVars:
+      - key: BRAVE_API_KEY
+        sync: false          # set this manually in the Render dashboard
+      - key: PYTHON_VERSION
+        value: "3.11.9"

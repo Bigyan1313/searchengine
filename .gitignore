@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.env
+.DS_Store
+.idea/
+.vscode/
+
+# The index is rebuilt from lyrics.csv at deploy time — no need to commit it.
+indexdir/

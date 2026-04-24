@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="logo">Lyricly</a>
+  <form id="searchform" class="searchbar" autocomplete="off">
+    <input
+      id="q"
+      name="q"
+      type="text"
+      placeholder="Search the web or 50 years of pop lyrics…"
+      autofocus
+    >
+    <button type="submit" aria-label="Search">Search</button>
+  </form>
+  <div class="modes" role="tablist" aria-label="Search mode">
+    <button class="mode active" data-mode="local" role="tab">Local (Lyrics)</button>
+    <button class="mode"         data-mode="web"   role="tab">Web</button>
+  </div>
+</header>
+
+<main id="results" class="results" aria-live="polite"></main>
+
+<footer class="foot">
+  <span>Local index: Whoosh + BM25F over lyrics.csv</span>
+  <span>Web: Brave Search API</span>
+</footer>
+
+<script>
+(() => {
+  const form    = document.getElementById('searchform');
+  const input   = document.getElementById('q');
+  const out     = document.getElementById('results');
+  const modeBtns = document.querySelectorAll('.mode');
+  let mode = 'local';
+
+  modeBtns.forEach(b => b.addEventListener('click', () => {
+    modeBtns.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    mode = b.dataset.mode;
+    if (input.value.trim()) runSearch();
+  }));
+
+  form.addEventListener('submit', e => { e.preventDefault(); runSearch(); });
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g,
+      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function runSearch() {
+    const q = input.value.trim();
+    if (!q) { out.innerHTML = ''; return; }
+    out.innerHTML = `<div class="status">Searching…</div>`;
+    const url = (mode === 'web' ? '/api/web?q=' : '/api/local?q=') + encodeURIComponent(q);
+    try {
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      render(data, q);
+    } catch (err) {
+      out.innerHTML = `<div class="status error">Error: ${esc(err.message || err)}</div>`;
+    }
+  }
+
+  function render(data, q) {
+    const results = data.results || [];
+    if (!results.length) {
+      out.innerHTML = `<div class="status">No results for <b>${esc(q)}</b>.</div>`;
+      return;
+    }
+    const header = mode === 'local'
+      ? `<div class="count">About ${results.length} of ${data.total ?? results.length} results for <b>${esc(q)}</b></div>`
+      : `<div class="count">Web results for <b>${esc(q)}</b></div>`;
+
+    const html = results.map(r => mode === 'web' ? webCard(r) : localCard(r)).join('');
+    out.innerHTML = header + html;
+  }
+
+  function webCard(r) {
+    return `
+      <article class="hit">
+        <div class="hit-url">${esc(r.display_url || r.url)}</div>
+        <h3 class="hit-title"><a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title)}</a></h3>
+        <p class="hit-snippet">${r.snippet /* Brave returns HTML-safe text; escape just in case */ ? esc(r.snippet) : ''}</p>
+      </article>
+    `;
+  }
+
+  function localCard(r) {
+    const meta = [
+      r.year    ? `Year: <b>${esc(r.year)}</b>`     : '',
+      r.rank    ? `Rank: <b>${esc(r.rank)}</b>`     : '',
+      r.artist  ? `Artist: <b>${esc(r.artist)}</b>` : '',
+    ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    // r.snippet is HTML we generated server-side with <mark> tags — do NOT escape.
+    return `
+      <article class="hit">
+        <h3 class="hit-title">
+          <a href="/song/${encodeURIComponent(r.doc_id)}" target="_blank" rel="noopener">${esc(r.title) || '(untitled)'}</a>
+        </h3>
+        <div class="hit-meta">${meta}</div>
+        <p class="hit-snippet">${r.snippet || ''}</p>
+      </article>
+    `;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS 5300 — Keyword Search Project</title>
+<style>
+  :root { --ink:#1a1a1a; --faint:#6a6a6a; --accent:#2b4eff; --bg:#fafaf7; --border:#e5e3db; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; padding:60px 24px;
+    font-family: "Iowan Old Style", "Charter", Georgia, serif;
+    background: var(--bg); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  }
+  .card {
+    max-width: 560px; background: #fff; border:1px solid var(--border);
+    border-radius: 14px; padding: 40px; box-shadow: 0 2px 18px rgba(0,0,0,.04);
+  }
+  h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -.01em; }
+  h1::first-letter { color: var(--accent); }
+  .sub { color: var(--faint); margin-bottom: 28px; font-size: 15px; }
+  .row { margin: 20px 0; }
+  .label { font-size: 12px; text-transform: uppercase; color: var(--faint); letter-spacing: .08em; margin-bottom: 4px; }
+  a.btn {
+    display: inline-block; margin-top: 10px;
+    padding: 11px 22px; border-radius: 999px;
+    background: var(--ink); color: #fff;
+    text-decoration: none; font-size: 15px;
+  }
+  a.btn:hover { background:#000; }
+  .meta { font-size: 13px; color: var(--faint); margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+  code { background: #f0efe8; padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Lyricly</h1>
+  <p class="sub">Keyword search project — web search + 50 years of pop lyrics.</p>
+
+  <div class="row">
+    <div class="label">Live application</div>
+    <!-- REPLACE the href below with your actual Render URL once deployed -->
+    <a class="btn" href="https://lyricly-search.onrender.com" target="_blank" rel="noopener">
+      Open the search app →
+    </a>
+  </div>
+
+  <div class="row">
+    <div class="label">What it does</div>
+    <p>Part A performs web searches via the Brave Search API. Part B performs
+    full-text search over <code>lyrics.csv</code> (5,053 songs) using a Whoosh
+    BM25F index with stemming, and renders KWIC snippets with highlighted query terms.</p>
+  </div>
+
+  <p class="meta">wwj15 · Texas State University</p>
+</main>
+</body>
+</html>
