@@ -46,6 +46,18 @@ python app.py                      # -> http://localhost:5000
 The free tier sleeps after 15 minutes of inactivity and takes ~30 seconds to
 wake up on the next request. That's fine for a class demo.
 
+## Deploying to Railway
+
+1. Push this repo to GitHub.
+2. In Railway, create a new project from this GitHub repo.
+3. Set environment variable `BRAVE_API_KEY` in Railway project settings.
+4. Deploy.
+
+This repo includes `nixpacks.toml`, so Railway will:
+- install dependencies with `pip install -r requirements.txt`
+- build the Whoosh index via `python build_index.py`
+- start with `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60`
+
 ## Hosting the Part A landing page at cs.txstate.edu/~wwj15
 
 1. Edit `public_html_index.html` and replace the Render URL with yours.
